@@ -1,0 +1,41 @@
+name: mlcdc
+channels:
+    - conda-forge
+dependencies:
+    - python=3.10
+# Basics
+    - numpy
+    - scipy
+    - cython
+    - future
+    - matplotlib
+# xarray et al
+    - xarray
+    - netCDF4
+    - bottleneck
+    - dask[complete]
+    - dask-jobqueue
+    - dask-mpi
+    - graphviz
+    - python-graphviz
+    - cftime
+    - zarr
+# plotting
+    - seaborn
+    - cartopy
+    - cmocean
+# jupyter etc
+    - jupyter
+    - ipython
+    - ipykernel
+# nice things
+    - tqdm
+    - pyfftw
+    - tmux
+    - colordiff
+# Specify blas to use mkl
+    - mkl
+    - libblas=*=*mkl
+    - pip
+    - pip:
+        - tensorflow
