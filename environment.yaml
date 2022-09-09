@@ -20,6 +20,8 @@ dependencies:
     - python-graphviz
     - cftime
     - zarr
+# ML
+    - dask-ml
 # plotting
     - seaborn
     - cartopy
@@ -39,3 +41,4 @@ dependencies:
     - pip
     - pip:
         - tensorflow
+        - scikeras[tensorflow]
