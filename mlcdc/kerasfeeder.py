@@ -122,6 +122,11 @@ class KerasFeeder():
         if self.load_into_memory:
             xds = xds.load();
 
+        # get a 2D mask for unstacking horizontal
+        self.mask2d = self.get_mask(xds)
+        self.mask1d = self.stack_horizontal(self.mask2d)
+        self.active_index = np.arange(len(self.mask1d))[self.mask1d]
+
         xds = self.stack_horizontal(xds)
 
         xds = self.remove_nans(xds)
@@ -162,7 +167,7 @@ class KerasFeeder():
                 f"    {'Training Fraction':<24s}: {self.training_fraction}\n"+\
                 f"    {'Normalize Data':<24s}: {self.normalize_data}\n"+\
                 f"    {'Load into Memory':<24s}: {self.load_into_memory}\n"+\
-                f"    {'Number of training samples':<24s}: {self.n_samples}\n"
+                f"    {'Num. training samples':<24s}: {self.n_samples}\n"
 
         return mystr
 
@@ -237,8 +242,8 @@ class KerasFeeder():
             random_seed (int, optional): RNG seed
 
         Sets Attributes:
-            features (dict): with keys/values corresponding to :attr:`feature_names` and dataset
-            labels (dict): with key/svalues corresponding to :attr:`label_name` in dataset
+            features (dict): with keys "training", "testing", values are dicts with keys/values correspond to :attr:`feature_names` in dataset
+            labels (dict): with keys "training", "testing", values correspond to :attr:`label_name` in dataset
         """
         train_ds, test_ds = split_dataset(xds,
                                           dim=self.sample_dim,
@@ -322,6 +327,25 @@ class KerasFeeder():
             inputs.append(keras.Input(shape=shape, name=key))
 
         self.inputs = inputs
+
+
+    def unstack_horizontal(self, arr, fill_value=np.nan):
+        """Unstack flattened horizontal coordinates. After all the data splitting, NaN removing, etc, this stacking gets lost to xarray it seems
+
+        Args:
+            arr (array_like): 1D array to be expanded to 2D
+            fill_value (float, optional): fill any masked points with this value
+
+        Returns:
+            xda (:obj:`xarray.DataArray`): with the expanded 2D array
+        """
+        arr = arr.values if isinstance(arr, xr.DataArray) else arr
+        full_1d_vector = fill_value*np.ones_like(self.mask1d)
+        full_1d_vector[self.active_index] = arr
+        return xr.DataArray(data=np.reshape(full_1d_vector, self.mask2d.shape),
+                            coords=self.mask2d.coords,
+                            dims=self.mask2d.dims,
+                           )
 
 
     # Not really clear if these one-liners need their own methods ... oh well
