@@ -1,23 +1,34 @@
-"""Class to read in labels and raw data, create a zarr store for training/testing
-"""
-
 from os.path import join
 import numpy as np
-import matplotlib.pyplot as plt
 import xarray as xr
 import zarr
 
-import sys
-sys.path.insert(0, '/work/noaa/gsienkf/zstanley/projects/mlcdc/notebooks/')
-from load_data_fns import (
-        open_full_dataset, reduce_vertical_levels, get_vertical_coordinates,
-        get_wind_speed, get_srf_current_speed, get_sst, get_ast )
+#from .load_data_fns import (open_full_dataset,
+#        #reduce_vertical_levels, get_vertical_coordinates,
+#        #get_wind_speed, get_srf_current_speed, get_sst, get_ast
+#        )
 
-class DataOrganizer():
+class GCMDataConverter():
+    """Convert GCM output to dataset with features and labels, save as zarr store
+    GCM output is expected to have dimensions:
 
-    label_fname = '/work2/noaa/gsienkf/tsmith/mlcdc/data/temperature_cross_correlations_averaged.nc'
+        ('ens_mem', 'atm_lev', 'ocn_lev', 'lat', 'lon')
+
+
+    Attributes:
+        label_nc_fname (str): path to netcdf dataset with labels (correlations)
+        labelname (str): name of field in dataset that denotes correlation field
+        gcm_nc_dir (str): directory containing multiple netcdf files, one per ensemble member
+        rename (dict): denoting how variable names are to be renamed
+        coarsen (dict): how to coarsen the dataset, e.g. average ensemble members over N members
+        chunks (dict): chunking scheme for zarr store
+        zstore_dir (str): directory inside of which to save zarr store
+        keep_vars (list of str): field names to keep in feature dataset
+        ocn_2d_vars (list of str): 2D oceanic fields, remove extraneous vertical coordinate. These variables must be in :attr:`keep_vars`
+    """
+    label_nc_fname = '/work2/noaa/gsienkf/tsmith/mlcdc/data/temperature_cross_correlations_averaged.nc'
     labelname = "corr_atm_ocn"
-    raw_dir = '/work2/noaa/gsienkf/weihuang/WCLEKF_PRODFORECAST/20151205000000/latlongrid-20151206.030000/AtmOcnIce/'
+    gcm_nc_dir = '/work2/noaa/gsienkf/weihuang/WCLEKF_PRODFORECAST/20151205000000/latlongrid-20151206.030000/AtmOcnIce/'
 
     rename = {
             'ens_mem'   : 'member',
@@ -46,6 +57,7 @@ class DataOrganizer():
 
 
     def __init__(self, **kwargs):
+        """All attributes can be changed by passing as keyword arguments to initialization"""
         for key, val in kwargs.items():
             setattr(self, key, val)
 
@@ -62,13 +74,23 @@ class DataOrganizer():
 
 
     def get_labels(self):
-        xds = xr.open_dataset(self.label_fname)
+        """Get the field/array with labels from netcdf file
+
+        Returns:
+            xda (:obj:`xarray.DataArray`): the field of labels (correlation)
+        """
+        xds = xr.open_dataset(self.label_nc_fname)
         return xds[self.labelname]
 
 
     def get_predictors(self):
+        """Get the predictors/features from gcm nc files
 
-        xds = open_full_dataset(self.raw_dir)
+        Returns:
+            xds (:obj:`xarray.Dataset`): With all features/predictors as data variables
+        """
+
+        xds = open_full_dataset(self.gcm_nc_dir)
         xds = reduce_vertical_levels(xds)
         xds = xds[self.keep_vars]
         xds = get_vertical_coordinates(xds)
@@ -100,6 +122,12 @@ class DataOrganizer():
             0 : ocean
             1 : land
             2 : seaice
+
+        Args:
+            xds (:obj:`xarray.Dataset`): apply mask to all data variables in this xarray dataset
+
+        Returns:
+            xds (:obj:`xarray.Dataset`): with mask applied
         """
 
         mask = (xds['atm_slmsk'] == 0).all('ens_mem')
@@ -113,7 +141,12 @@ class DataOrganizer():
 
 
     def rechunk(self, xds):
-        """Not clear if this encoding workaround is necessary for this xarray version ... oh well"""
+        """Apply encoding workaround and chunk
+        Not clear if this encoding workaround is necessary for this xarray version ... oh well
+
+        Args:
+            xds (:obj:`xarray.Dataset`): xarray dataset to rechunk
+        """
 
         for key in xds.data_vars:
             xds[key].encoding={}
@@ -122,6 +155,11 @@ class DataOrganizer():
 
 
     def saveit(self, xds):
+        """Apply renaming, coarsen, and chunking. Then save dataset to a zarr store.
+
+        Args:
+            xds (:obj:`xarray.Dataset`): xarray dataset to save
+        """
 
         xds = xds.rename(self.rename)
         xds = xds.coarsen(self.coarsen, boundary='exact').mean()
@@ -130,9 +168,3 @@ class DataOrganizer():
         store = zarr.NestedDirectoryStore(path=self.zstore_path)
         xds.to_zarr(store=store)
         print(f"Saved zarr store at: {self.zstore_path}")
-
-
-if __name__ == "__main__":
-
-    do = DataOrganizer(zstore_dir="/work2/noaa/gsienkf/tsmith/mlcdc/data/")
-    do()
