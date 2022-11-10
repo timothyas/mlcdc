@@ -18,12 +18,13 @@ member subsets.
 For details on the neural network architecture, see
 [notebooks/surface_feedforward_regression.ipynb](notebooks/surface_feedforward_regression.ipynb).
 
-<img src="figures/surface_temperature_correlation_map_kfold.jpg" width=550> <img src="figures/surface_correlation_prediction_histogram_kfold.jpg" width=250>
+<img src="figures/surface_tcorr_kfold_maps_and_histogram.jpg" width=1000>
 
 The map shows the true and predicted surface temperature correlation field.
 The plot on the right indicates prediction skill, showing a bivariate histogram
-between the predicted and true data (colormap).
-The histogram contains 99% of the data, and the final 1% is represented by the
+between the predicted and true data (brighter colors indicate higher data
+density).
+The histogram contains 99.9% of the data, and the final 0.01% is represented by the
 scatter plot.
 The faint gray line indicates the 1:1 line where prediction = truth.
 
