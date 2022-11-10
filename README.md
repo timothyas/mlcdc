@@ -13,7 +13,7 @@ following features (which we can definitely optimize further!):
 - Atmosphere: 2 meter humidity, 2 meter temperature, sensible heat flux due to rainfall, total precip, surface horizontal wind speed
 - Ocean: SST, surface height, horizontal surface speed, barotropic current speed, mixed layer depth, mean eddy kinetic energy
 
-Each "feature" is taken as a small-ensemble average, which, for now, is derived from 20
+Each "feature" is taken as a small-ensemble average, which, for now, is derived from 5
 member subsets.
 For details on the neural network architecture, see
 [notebooks/surface_feedforward_regression.ipynb](notebooks/surface_feedforward_regression.ipynb).
